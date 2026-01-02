@@ -1,84 +1,50 @@
 class GameScene extends Phaser.Scene {
     constructor() {
-        super('GameScene');
+        super({ key: 'GameScene' });
         this.paddle = null;
-        this.ball = null;
-        this.scoreText = null;
-        this.score = 0;
+    }
+
+    preload() {
+        // No assets to preload for this simple demo
     }
 
     create() {
-        // Create the paddle
-        this.paddle = this.physics.add.image(400, 550, 'paddle').setImmovable();
-        this.paddle.setCollideWorldBounds(true);
-        // We are creating a simple texture for the paddle and ball on the fly
-        this.paddle.setTexture(this.createTexture('paddleTexture', 100, 20, '#ffffff'));
+        // Set background color
+        this.cameras.main.setBackgroundColor('#2d2d2d');
 
-        // Create the ball
-        this.ball = this.physics.add.image(400, 300, 'ball');
-        this.ball.setCircle(10);
-        this.ball.setCollideWorldBounds(true);
-        this.ball.setBounce(1, 1);
-        this.ball.setVelocity(200, 200);
-        this.ball.setTexture(this.createTexture('ballTexture', 20, 20, '#ff4444'));
+        // Create the paddle as a simple graphics object
+        this.paddle = this.add.graphics({ fillStyle: { color: 0xffffff } });
+        this.paddle.fillRect(0, 0, 100, 20); // x, y, width, height
 
-        // Create score text
-        this.scoreText = this.add.text(16, 16, 'Move the mouse left and right', { fontSize: '24px', fill: '#fff' });
+        // Center the paddle initially
+        this.paddle.x = this.sys.game.config.width / 2 - 50;
+        this.paddle.y = this.sys.game.config.height - 50;
 
-        // Physics collisions
-        this.physics.add.collider(this.ball, this.paddle, this.hitPaddle, null, this);
-        
-        // --- The Key Part for Persistent Control ---
-        // This listener is on the global input manager, which listens to the whole document.
-        // This means even if the pointer is outside the game canvas, as long as the window is in focus,
-        // the 'pointermove' event will fire and update the paddle's position.
+        // --- The Key Solution ---
+        // Listen for the 'pointermove' event on the global input manager.
+        // This tracks the pointer's position across the entire page, not just the canvas.
         this.input.on('pointermove', (pointer) => {
-            // We constrain the paddle's position to stay within the game's world bounds.
-            this.paddle.x = Phaser.Math.Clamp(pointer.x, this.paddle.width / 2, this.physics.world.bounds.width - this.paddle.width / 2);
+            // We still want to clamp the paddle's position within the game's bounds
+            const paddleX = Phaser.Math.Clamp(pointer.x, 50, this.sys.game.config.width - 50);
+            this.paddle.x = paddleX - 50; // Adjust for the paddle's width
         });
 
-        this.add.text(this.cameras.main.width / 2, 30, '커서가 게임 영역 밖으로 나가도 패들은 계속 움직입니다.', {
-            fontSize: '16px',
-            fill: '#00ff00'
-        }).setOrigin(0.5);
+        // Add some text to explain the concept
+        this.add.text(
+            this.sys.game.config.width / 2,
+            this.sys.game.config.height / 2,
+            'Move the mouse left and right.\nThe paddle will follow even if the cursor is outside the game area.',
+            {
+                font: '18px Arial',
+                fill: '#ffffff',
+                align: 'center',
+                wordWrap: { width: this.sys.game.config.width - 40 }
+            }
+        ).setOrigin(0.5);
     }
 
     update() {
-        // Reset ball if it goes off the bottom of the screen
-        if (this.ball.y > 600) {
-            this.resetBall();
-        }
-    }
-
-    hitPaddle(ball, paddle) {
-        let diff = 0;
-        if (ball.x < paddle.x) {
-            // Ball is on the left-hand side of the paddle
-            diff = paddle.x - ball.x;
-            ball.setVelocityX(-10 * diff);
-        } else if (ball.x > paddle.x) {
-            // Ball is on the right-hand side of the paddle
-            diff = ball.x - paddle.x;
-            ball.setVelocityX(10 * diff);
-        } else {
-            // Ball is perfectly in the middle
-            ball.setVelocityX(2 + Math.random() * 8);
-        }
-    }
-    
-    resetBall() {
-        this.ball.setPosition(400, 300);
-        this.ball.setVelocity(200, 200);
-    }
-    
-    // Helper to create simple rectangle textures
-    createTexture(key, width, height, color) {
-        let graphics = this.make.graphics({ x: 0, y: 0, add: false });
-        graphics.fillStyle(Phaser.Display.Color.HexStringToColor(color).color, 1);
-        graphics.fillRect(0, 0, width, height);
-        graphics.generateTexture(key, width, height);
-        graphics.destroy();
-        return key;
+        // No per-frame updates needed as the pointer event handles the logic.
     }
 }
 
@@ -86,14 +52,8 @@ const config = {
     type: Phaser.AUTO,
     width: 800,
     height: 600,
-    physics: {
-        default: 'arcade',
-        arcade: {
-            gravity: { y: 0 },
-            debug: false
-        }
-    },
-    scene: [GameScene]
+    scene: [GameScene],
+    parent: 'phaser-example'
 };
 
 const game = new Phaser.Game(config);
